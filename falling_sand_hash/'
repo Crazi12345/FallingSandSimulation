@@ -30,20 +30,21 @@ fn main() {
     // Create a renderer to draw on the window
     let mut canvas: Canvas<Window> = window.into_canvas().build().unwrap();
     let mut painting: bool = false;
-    let mut mouse_x: i32 = 0;
-    let mut mouse_y: i32 = 0;
+    let mut mouseX: i32 = 0;
+    let mut mouseY: i32 = 0;
     // Set background color
     canvas.set_draw_color(Color::RGB(0, 0, 0)); // Black background
     canvas.set_draw_color(Color::RGB(250, 0, 0)); // Red background
                                                   // Event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
-        iteration(&mut points);
+        iteration(&mut points, &mut canvas);
         draw(points.clone(), &mut canvas);
         canvas.present();
         if painting {
-            new_point(mouse_x, mouse_y, &mut points, 1);
+            new_point(mouseX, mouseY, &mut points, 1);
         }
+        // std::thread::sleep(Duration::new(0, 5000000));
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -55,8 +56,8 @@ fn main() {
                 }
                 Event::MouseMotion { x, y, .. } => {
                     if y < height as i32 && x < width as i32 && y > 0 && x > 0 {
-                        mouse_x = x;
-                        mouse_y = y;
+                        mouseX = x;
+                        mouseY = y;
                     }
                 }
 
@@ -75,31 +76,37 @@ fn main() {
 fn draw(points: HashMap<(i32, i32), i32>, canvas: &mut Canvas<sdl2::video::Window>) {
     canvas.set_draw_color(Color::RGB(0, 0, 0)); // Black background
     canvas.clear();
-    canvas.set_draw_color(Color::RGB(180, 0, 180)); // Red background
-    for key in points.keys() {
-            let _ = canvas.draw_point(Point::new(key.0, key.1));
+    canvas.set_draw_color(Color::RGB(0, 0, 180)); // Red background
+    for (key, value) in points {
+        if value == 1 {
+            canvas.draw_point(Point::new(key.0, key.1));
+        }
     }
 }
 fn new_point(x: i32, y: i32, points: &mut HashMap<(i32, i32), i32>, val: i32) {
-    if points.contains_key(&(x,y)) {
-        return  }
-
     points.insert((x, y), val);
 }
 fn delete_point(x: i32, y: i32, points: &mut HashMap<(i32, i32), i32>) {
     points.remove(&(x, y));
 }
-fn iteration(points: &mut HashMap<(i32, i32), i32>) {
-    let new_points = points.clone();
-    for (key, _value) in new_points {
-        if key.1 >= 999 {
-            continue;
+
+fn iteration(points: &mut HashMap<(i32, i32), i32>, canvas: &mut Canvas<sdl2::video::Window>) {
+    let mut keys_to_update: Vec<(i32, i32)> = Vec::new();
+
+    for (key, value) in points.iter() {
+        if *value == 1 {
+            if points.get(&(key.0, key.1 + 1)).is_none() {continue;}
+            if let val = *points.get(&(key.0, key.1 + 1)).unwrap() != 1{
+
+                points.remove(&(key.0, key.1));
+                points.insert((key.0, key.1+1), 1);
+                }
+            }
         }
-        if points.contains_key(&(key.0,key.1+1)){
-                continue;
-        }
-        delete_point(key.0, key.1, points);
-        new_point(key.0, key.1+1, points, 1);
+
+    // Perform updates based on collected keys
+    for key in keys_to_update {
+        points.remove(&(key.0, key.1));
+        points.insert((key.0, key.1+1), 1);
     }
 }
-
